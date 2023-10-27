@@ -23,7 +23,7 @@ public class WebApplicationServer {
         log.info("configuring app with basedir: {}", new File("./" + webAppDirLocation).getAbsolutePath());
 
         tomcat.start();
-        System.out.println("================정상 작동=================");
+        System.out.println("================Tomcat 정상 작동=================");
         tomcat.getServer().await();
     }
 }

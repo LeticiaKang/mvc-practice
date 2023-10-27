@@ -58,6 +58,8 @@ public class DispatcherSevlet extends HttpServlet {
          * redirect:/users는 request.getRequestDispatcher(viewName)에 맞지 않기 때문에 ViewResolver로 나눠줘야 한다.
          */
         try {
+            System.out.println("================Dispatcher service 정상 작동=================");
+
             Controller handler = rmhm.findHandler(new HandlerKey(RequestMethod.valueOf(request.getMethod()), request.getRequestURI()));
             String viewName = handler.handleRequest(request, response); //"redirect:/users"
 
