@@ -3,9 +3,6 @@ package org.example.mvc.controller;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * requestMappingHandler에서
- */
 public class ForwardController implements Controller{
     private final String forwardUriPath;
 

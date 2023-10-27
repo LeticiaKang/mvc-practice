@@ -73,7 +73,7 @@ public class DispatcherSevlet extends HttpServlet {
 
         } catch (Exception e) {
             log.error("====exception occurred: [{}]====", e.getMessage(), e);
-            throw new RuntimeException(e);
+            throw new ServletException(e);
         }
     }
 }
