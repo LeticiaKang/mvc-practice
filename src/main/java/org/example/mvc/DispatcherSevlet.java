@@ -3,13 +3,10 @@ package org.example.mvc;
 import org.example.mvc.controller.Controller;
 import org.example.mvc.controller.HandlerKey;
 import org.example.mvc.controller.RequestMethod;
-import org.example.mvc.view.JspViewResolver;
-import org.example.mvc.view.View;
-import org.example.mvc.view.ViewResolver;
+import org.example.mvc.view.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -28,18 +25,24 @@ public class DispatcherSevlet extends HttpServlet {
      * 그때 init메서드가 호출된다. 동시에 rmhm(RequestMappingHandlerMapping)이 초기화된다.
      */
 
-    private RequestMappingHandlerMapping rmhm;
-
     private static final Logger log = LoggerFactory.getLogger(DispatcherSevlet.class);
+
+    private List<HandlerMapping> handlerMappings;
+
+    private List<HandlerAdapter> handlerAdapters;
 
     private List<ViewResolver> viewResolvers;
 
     @Override
     public void init() throws ServletException {
-        rmhm = new RequestMappingHandlerMapping();
+        RequestMappingHandlerMapping rmhm = new RequestMappingHandlerMapping();
         rmhm.init();
 
-        viewResolvers = Collections.singletonList(new JspViewResolver()); //초기화
+        AnnotationHandlerMapping ahm = new AnnotationHandlerMapping();
+
+        handlerMappings = List.of(rmhm, ahm);
+        handlerAdapters = List.of(new SimpleControllerHandlerAdapter());
+        viewResolvers = Collections.singletonList(new JspViewResolver());
     }
 
     @Override
@@ -50,6 +53,8 @@ public class DispatcherSevlet extends HttpServlet {
          * handler에게 request, response를 보내 다시 위임한다.
          */
         log.info("=====[DispatcherSevlet] service started====="); // 연결마다 출력됨을 확인함
+        String requestURI = request.getRequestURI();
+        RequestMethod requestMethod = RequestMethod.valueOf(request.getMethod());
 
         /**
          * form.jsp => handler는 userCreateController()가 된다.
@@ -60,12 +65,23 @@ public class DispatcherSevlet extends HttpServlet {
         try {
             System.out.println("================Dispatcher service 정상 작동=================");
 
-            Controller handler = rmhm.findHandler(new HandlerKey(RequestMethod.valueOf(request.getMethod()), request.getRequestURI()));
-            String viewName = handler.handleRequest(request, response); //"redirect:/users"
+            Object handler = handlerMappings.stream()
+                    .filter(hm -> hm.findHandler(new HandlerKey(requestMethod, requestURI)) != null)
+                    .map(hm -> hm.findHandler(new HandlerKey(requestMethod, requestURI)))
+                    .findFirst()
+                    .orElseThrow(() -> new ServletException("No handler for [" + requestMethod + ", " + requestURI + "]"));
+
+            HandlerAdapter handlerAdapter = handlerAdapters.stream()
+                    .filter(ha -> ha.suppeorts(handler))
+                    .findFirst()
+                    .orElseThrow(() -> new ServletException("No adapter for handler [" + handler + "]"));
+
+            ModelAndView modelAndView = handlerAdapter.handle(request, response, handler);
 
             for (ViewResolver viewResolver : viewResolvers) {
-                View view = viewResolver.resolveView(viewName);
-                view.render(new HashMap<>(), request, response);
+                View view = viewResolver.resolveView(modelAndView.getViewName());
+                view.render(modelAndView.getModel(), request, response);
+//                view.render(new HashMap<>(), request, response);
             }
 
 //            RequestDispatcher requestDispatcher = request.getRequestDispatcher(viewName);
